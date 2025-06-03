@@ -1,0 +1,62 @@
+#타이머 추가
+
+from ultralytics import YOLO
+import cv2
+import time
+
+model = YOLO("yolov8n_cv.pt")
+
+# 시작 시간
+start_time = time.time()  
+
+# 웹캠 연결
+cap = cv2.VideoCapture(0)
+
+# 웹캠 오류 처리
+if not cap.isOpened():
+    print("camera open failed")
+    exit()
+
+while True:
+    # 카메라 읽기
+    status, img = cap.read()
+    if not status:
+        print("Can't read camera")
+        break
+
+    # 카메라 창 띄우기
+    results = model.predict(source = img)
+    plots = results[0].plot()
+    cv2.imshow("PC_Webcam",plots)
+
+    # esc 누르면 종료하기
+    if cv2.waitKey(1) == 27:
+        break
+
+    # detec boxes.cls 클래스 번호 가져와서 이름으로 바꿈
+    detected = [results[0].names[int(x)] for x in results[0].boxes.cls]
+    print('print:', detected)
+    
+    # 사람이 없고, 컵 또는 폰이 있을 때
+    if 'person' not in detected and ('cup' in detected or 'phone' in detected):
+        if not cleanup_timer_started:
+            cleanup_start_time = time.time()  # 타이머 시작
+            cleanup_timer_started = True
+            print("타이머 시작됨")
+
+        # 경과 시간 체크
+        elapsed = time.time() - cleanup_start_time
+        if elapsed >= 30: #30초 이상이 되면
+            print("!!!clean up!!!")
+            break
+
+    else:
+        # 사람 다시 등장하거나 컵/폰 없으면 타이머 초기화
+        cleanup_timer_started = False
+        cleanup_start_time = None
+        print("타이머 초기화")
+
+    time.sleep(1)  # 1초 간격으로 실행 (CPU 낭비 방지)
+
+cap.release()
+cv2.destroyAllWindows()
