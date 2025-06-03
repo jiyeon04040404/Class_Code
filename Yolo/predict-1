@@ -1,4 +1,7 @@
+#python
 #컴비전 기말 욜로v8 커스텀 트레이닝
+#웹캠 사용
+#타이머 x
 
 from ultralytics import YOLO
 import cv2
