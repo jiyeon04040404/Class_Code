@@ -1,0 +1,54 @@
+#컴비전 기말 욜로v8 커스텀 트레이닝
+
+from ultralytics import YOLO
+import cv2
+
+# 웹캠 연결
+cap = cv2.VideoCapture(0)
+
+count = 0
+
+# 웹캠 오류 처리
+if not cap.isOpened():
+    print("camera open failed")
+    exit()
+
+while True:
+    # 카메라 읽기
+    status, img = cap.read()
+    if not status:
+        print("Can't read camera")
+        break
+
+    # 카메라 창 띄우기
+    results = model.predict(source = img)
+    plots = results[0].plot()
+    cv2.imshow("PC_Webcam",plots)
+
+    # esc 누르면 종료하기
+    if cv2.waitKey(1) == 27:
+        break
+# detec boxes.cls 클래스 번호 가져와서 이름으로 바꿈
+detected = [results[0].names[int(x)] for x in results[0].boxes.cls]
+print('print:', detected)
+
+if ('person' in detected) :
+    count = 0
+
+elif ('person' not in detected) and ('cup' not in detected) :
+    count = 0
+        
+elif ('person' not in detected) and ('phone' not in detected) :
+    count = 0
+
+elif ('person' not in detected) and ('cup' in detected) :
+    count += 1
+
+elif ('person' not in detected) and ('phone' in detected) :
+    count += 1
+
+if count >= 600 :
+        print('!!!clean up!!!')
+
+cap.release()
+cv2.destroyAllWindows()
