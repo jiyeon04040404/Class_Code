@@ -1,0 +1,84 @@
+from ultralytics import YOLO
+import cv2
+import pyttsx3
+
+# 모델 및 TTS 엔진 초기화
+model = YOLO("C:/YOLO_Prj/ultralytics/yolov8n_cv.pt")
+engine = pyttsx3.init()
+
+# 영상 파일 열기
+video_path = "C:/YOLO_Prj/vb.mp4"  #영상 경로
+cap = cv2.VideoCapture(video_path)
+
+# FPS로 3초 프레임 수 계산
+fps = cap.get(cv2.CAP_PROP_FPS)
+required_frame_count = int(fps * 3)
+
+# 상태 변수
+condition_frame_count = 0
+tts_triggered = False
+
+while True:
+    ret, frame = cap.read()
+    if not ret:
+        break
+
+    # YOLO 예측 (필요 클래스만 지정: person, cup, dining table, cell phone)
+    results = model.predict(source=frame, classes=[0, 41, 60, 67], verbose=False)
+    plots = results[0].plot()
+    cv2.imshow("Video Detection", plots)
+
+    boxes = results[0].boxes.xyxy
+    classes = results[0].boxes.cls
+    confidences = results[0].boxes.conf
+    names = results[0].names
+
+    # 감지된 클래스 이름 출력
+    detected_names = [names[int(c)] for c in classes]
+    print(f"Detected objects: {detected_names}")
+
+    # 신뢰도 0.5 이상 person 감지 여부
+    person_present = any(
+        names[int(c)] == 'person' and confidences[i] >= 0.5
+        for i, c in enumerate(classes)
+    )
+
+    # 테이블 및 대상 물체(box) 추출
+    table_boxes = [boxes[i] for i, c in enumerate(classes) if names[int(c)] == 'dining table']
+    target_boxes = [boxes[i] for i, c in enumerate(classes) if names[int(c)] in ['cup', 'cell phone']]
+
+    # 물건이 테이블 위에 있는지 여부 판단
+    item_on_table = False
+    for table_box in table_boxes:
+        for obj_box in target_boxes:
+            x1 = max(table_box[0], obj_box[0])
+            y1 = max(table_box[1], obj_box[1])
+            x2 = min(table_box[2], obj_box[2])
+            y2 = min(table_box[3], obj_box[3])
+            if x2 - x1 > 0 and y2 - y1 > 0:
+                item_on_table = True
+                break
+        if item_on_table:
+            break
+
+    # 조건 판단 및 타이머 동작
+    if not person_present and item_on_table:
+        condition_frame_count += 1
+        print(f"타이머 작동 중... ({condition_frame_count}/{required_frame_count} frames)")
+
+        if condition_frame_count >= required_frame_count and not tts_triggered:
+            print("청소가 필요합니다!")
+            engine.say("청소가 필요합니다!")
+            engine.runAndWait()
+            tts_triggered = True
+    else:
+        condition_frame_count = 0
+        tts_triggered = False
+        print("사람 등장. 타이머 초기화")
+
+    # ESC 키 누르면 종료
+    if cv2.waitKey(1) == 27:
+        break
+
+cap.release()
+cv2.destroyAllWindows()
