@@ -41,14 +41,6 @@ if ('person' in detected) :
 elif ('person' not in detected) and ('cup' not in detected) :
     count = 0
         
-elif ('person' not in detected) and ('phone' not in detected) :
-    count = 0
-
-elif ('person' not in detected) and ('cup' in detected) :
-    count += 1
-
-elif ('person' not in detected) and ('phone' in detected) :
-    count += 1
 
 if count >= 600 :
         print('!!!clean up!!!')
